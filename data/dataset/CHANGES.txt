@@ -1,0 +1,11 @@
+Original dataset:
+https://github.com/garythung/trashnet/
+
+Changes introduced to the dataset:
+- Renamed images with hashes
+- Moved all images to single folder
+- Created labels file
+- Removed leaks/duplicates between classes:
+    - 70df08c3ce6d55e25df4edbbe45e5fe3.jpg
+	- a2236bc6f8eae80bf7d6c5f259df8760.jpg
+	- e52ec9a8f6089b5780728b148c9f795e.jpg
