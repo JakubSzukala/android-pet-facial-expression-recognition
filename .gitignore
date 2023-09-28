@@ -1,3 +1,2 @@
 # Do not track dataset
-data/dataset/
 */__pycache__
