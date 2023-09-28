@@ -19,7 +19,7 @@ from typing import (
 # Credit: https://kozodoi.me/blog/20210308/compute-image-stats
 def calculate_mean_and_std(
     img_paths: Union[Tuple, List],
-    transforms: Callable,
+    resize_to: Optional[Tuple[int, int]]=None,
     device: Optional[Literal['cpu', 'cuda']]='cpu'
 ) -> Tuple[float, float]:
     """
@@ -31,7 +31,6 @@ def calculate_mean_and_std(
             NOT colorchanging, cropping etc, anything that would change mean/std. Recommended example:
             >>> transform = A.Compose([
                     A.Resize(height = image_size, width = image_size),
-                    A.Normalize(mean = (0, 0, 0), std  = (1, 1, 1)),
                 ])
         device: Device on which calculations should be performed.
     Returns:
@@ -44,7 +43,10 @@ def calculate_mean_and_std(
 
     for img_path in tqdm(img_paths):
         image = np.array(Image.open(img_path).convert('RGB'))
-        image = torch.from_numpy(transforms(image=image)['image']).permute(2, 0, 1)
+        image = image / 255.0 # Normalize
+        if resize_to is not None: # If requested resize
+            image = A.Resize(resize_to[0], resize_to[1])(image=image)['image']
+        image = torch.from_numpy(image, ).permute(2, 0, 1) # Follow PyTorch convention
         px_sum += torch.sum(image, dim=(1, 2))
         px_sqsum += torch.sum(image ** 2, dim=(1, 2))
 
