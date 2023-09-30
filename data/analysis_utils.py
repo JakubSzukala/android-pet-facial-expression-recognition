@@ -20,26 +20,20 @@ from typing import (
 def calculate_mean_and_std(
     img_paths: Union[Tuple, List],
     resize_to: Optional[Tuple[int, int]]=None,
-    device: Optional[Literal['cpu', 'cuda']]='cpu'
 ) -> Tuple[float, float]:
     """
     Function to calculate mean and standard deviation from image dataset.
 
     Args:
         img_paths: Iterable with paths to images.
-        transforms: Transforms like resizing, normalizing and to tensor. Ones like would be used in test/val sets,
-            NOT colorchanging, cropping etc, anything that would change mean/std. Recommended example:
-            >>> transform = A.Compose([
-                    A.Resize(height = image_size, width = image_size),
-                ])
-        device: Device on which calculations should be performed.
+        resize_to: Tuple containing image size to resize to. None to not resize.
     Returns:
         mean: mean of normalized data. Returned in RGB format.
         std: standard deviation of normalized data. Returned in RGB format.
     """
-    device = torch.device(device)
-    px_sum =   torch.tensor([0.0, 0.0, 0.0], device=device)
-    px_sqsum = torch.tensor([0.0, 0.0, 0.0], device=device)
+    # TODO: Add different possible backend? torch / numpy
+    px_sum =   torch.tensor([0.0, 0.0, 0.0])
+    px_sqsum = torch.tensor([0.0, 0.0, 0.0])
 
     for img_path in tqdm(img_paths):
         image = np.array(Image.open(img_path).convert('RGB'))
@@ -58,3 +52,24 @@ def calculate_mean_and_std(
     total_var = (px_sqsum / channel_px_count) - (total_mean ** 2)
     total_std = torch.sqrt(total_var)
     return total_mean, total_std
+
+
+def check_imges_sizes(
+    img_paths: Union[Tuple, List]
+) -> np.ndarray:
+    """
+    Function to check image dimensionality across the dataset.
+
+    Args:
+        img_paths: Iterable with paths to images.
+
+    Returns:
+        uniques and counts: ndarray with unique image sizes and their counts.
+    """
+    img_sizes = []
+    for img_path in tqdm(img_paths):
+        image = np.array(Image.open(img_path).convert('RGB'))
+        image = np.array(image)
+        img_sizes.append(image.shape)
+
+    return np.unique(img_sizes, return_counts=True)
