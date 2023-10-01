@@ -39,12 +39,7 @@ def calculate_variance_single_pass(
     px_sqsum = torch.tensor([0.0, 0.0, 0.0])
 
     for img_path in tqdm(img_paths):
-        # TODO: Encapsulate image loading in function
-        image = np.array(Image.open(img_path).convert('RGB'))
-        image = image / 255.0 # Normalize
-        if resize_to is not None: # If requested resize
-            image = A.Resize(resize_to[0], resize_to[1])(image=image)['image']
-        image = torch.from_numpy(image).permute(2, 0, 1) # Follow PyTorch convention
+        image = _load_image(img_path, resize_to)
         px_sum += torch.sum(image, dim=(1, 2))
         px_sqsum += torch.sum(image ** 2, dim=(1, 2))
 
@@ -79,11 +74,7 @@ def calculate_variance_two_pass(
     # Compute mean
     px_sum = torch.tensor([0.0, 0.0, 0.0])
     for img_path in tqdm(img_paths):
-        image = np.array(Image.open(img_path).convert('RGB'))
-        image = image / 255.0 # Normalize
-        if resize_to is not None: # If requested resize
-            image = A.Resize(resize_to[0], resize_to[1])(image=image)['image']
-        image = torch.from_numpy(image).permute(2, 0, 1) # Follow PyTorch convention
+        image = _load_image(img_path, resize_to)
         px_sum += torch.sum(image, dim=(1, 2))
 
     channel_px_count = len(img_paths) * image.shape[1] * image.shape[2]
@@ -92,17 +83,12 @@ def calculate_variance_two_pass(
     # Compute variance
     px_centered_sqsum = torch.tensor([0.0, 0.0, 0.0])
     for img_path in tqdm(img_paths):
-        image = np.array(Image.open(img_path).convert('RGB'))
-        image = image / 255.0 # Normalize
-        if resize_to is not None: # If requested resize
-            image = A.Resize(resize_to[0], resize_to[1])(image=image)['image']
-        image = torch.from_numpy(image).permute(2, 0, 1) # Follow PyTorch convention
+        image = _load_image(img_path, resize_to)
         px_centered_sqsum += torch.sum((image - total_mean.view(3, 1, 1)) ** 2, dim=(1, 2))
 
     total_var = px_centered_sqsum / channel_px_count
     out = (total_var, total_mean) if return_mean else total_var
     return out
-
 
 
 def check_imges_sizes(
@@ -124,3 +110,15 @@ def check_imges_sizes(
         img_sizes.append(image.shape)
 
     return np.unique(img_sizes, return_counts=True)
+
+
+def _load_image(
+    img_path: str,
+    resize_to: Optional[Tuple[int, int]]=None
+) -> torch.tensor:
+    image = np.array(Image.open(img_path).convert('RGB'))
+    image = image / 255.0 # Normalize
+    if resize_to is not None: # If requested resize
+        image = A.Resize(resize_to[0], resize_to[1])(image=image)['image']
+    image = torch.from_numpy(image).permute(2, 0, 1) # Follow PyTorch convention
+    return image
