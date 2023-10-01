@@ -17,19 +17,22 @@ from typing import (
 )
 
 # Credit: https://kozodoi.me/blog/20210308/compute-image-stats
-def calculate_mean_and_std(
+def calculate_variance_single_pass(
     img_paths: Union[Tuple, List],
     resize_to: Optional[Tuple[int, int]]=None,
-) -> Tuple[float, float]:
+    return_mean: bool=False
+) -> Tuple[torch.tensor, torch.tensor]:
     """
-    Function to calculate mean and standard deviation from image dataset.
+    Function to calculate variance from image dataset. It performs a single pass over all data.
+    This is faster but may lead to numerical instability.
 
     Args:
         img_paths: Iterable with paths to images.
         resize_to: Tuple containing image size to resize to. None to not resize.
+        return_mean: Whether to return mean calculated during the pass over the data.
     Returns:
+        var: variance of normalized data. Returned in RGB format.
         mean: mean of normalized data. Returned in RGB format.
-        std: standard deviation of normalized data. Returned in RGB format.
     """
     # TODO: Add different possible backend? torch / numpy
     px_sum =   torch.tensor([0.0, 0.0, 0.0])
@@ -40,19 +43,17 @@ def calculate_mean_and_std(
         image = image / 255.0 # Normalize
         if resize_to is not None: # If requested resize
             image = A.Resize(resize_to[0], resize_to[1])(image=image)['image']
-        image = torch.from_numpy(image, ).permute(2, 0, 1) # Follow PyTorch convention
+        image = torch.from_numpy(image).permute(2, 0, 1) # Follow PyTorch convention
         px_sum += torch.sum(image, dim=(1, 2))
         px_sqsum += torch.sum(image ** 2, dim=(1, 2))
 
-    # TODO: This is not ideal to use last member from list iteration
     channel_px_count = len(img_paths) * image.shape[1] * image.shape[2]
 
-    # Mean and std
+    # Mean and var
     total_mean = px_sum / channel_px_count
     total_var = (px_sqsum / channel_px_count) - (total_mean ** 2)
-    total_std = torch.sqrt(total_var)
-    return total_mean, total_std
-
+    out = (total_var, total_mean) if return_mean else total_var
+    return out
 
 def check_imges_sizes(
     img_paths: Union[Tuple, List]
