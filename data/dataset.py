@@ -36,6 +36,10 @@ class TrashnetDataset(Dataset):
             images_dir: Path,
             transform: Optional[Callable]=None,
         ) -> None:
+        required_columns = set(['image_name', 'class_id', 'class_name'])
+        if not required_columns.issubset(df.columns):
+            raise KeyError(f'Dataframe must have folowing columns: {required_columns}'
+                           f'but only {df.columns} were present')
         self.df = df
         self.images_dir = images_dir
         self.transform = transform
