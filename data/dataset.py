@@ -36,11 +36,23 @@ class TrashnetDataset(Dataset):
             images_dir: Path,
             transform: Optional[Callable]=None,
         ) -> None:
-        required_columns = set(['image_name', 'class_id', 'class_name'])
-        if not required_columns.issubset(df.columns):
-            raise KeyError(f'Dataframe must have folowing columns: {required_columns}'
-                           f'but only {df.columns} were present')
+        # Sanity checks
+        required_columns = set(['image_name', 'class_id', 'class_name', 'fixed_idx'])
+        assert required_columns.issubset(df.columns)
+        assert len(df) == len(df.image_name.unique())
+        assert len(df) == len(df.fixed_idx.unique())
+
         self.df = df
+
+        # This fixes image name to idx, safer if df rows may be modified
+        self.image_index_to_image_name = {
+            idx: image_name
+            for idx, image_name in enumerate(df.image_name.unique())
+        }
+        self.image_name_to_image_index = {
+            v: k for k, v in self.image_index_to_image_name.items()
+        }
+
         self.images_dir = images_dir
         self.transform = transform
 
@@ -48,11 +60,10 @@ class TrashnetDataset(Dataset):
         return len(self.df)
 
     def __getitem__(self, index: int):
-        filepath = os.path.join(
-            self.images_dir,
-            self.df.iloc[index, self.df.columns.get_loc('image_name')]
-        )
-        label = self.df.iloc[index, self.df.columns.get_loc('class_id')]
+        row = self.df[self.df.image_name == self.image_index_to_image_name[index]]
+        image_name = row.image_name.values[0]
+        label = row.class_id.values[0]
+        filepath = os.path.join(self.images_dir, image_name)
         image = Image.open(filepath).convert("RGB")
         image = np.array(image)
 
